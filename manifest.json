@@ -1,5 +1,5 @@
 {
-	"name": "Wiretab",
+	"name": "Wiretap",
 	"version": "1.0",
 	"icons": {
 		"48": "48.png",
@@ -12,6 +12,6 @@
 	],
 	"browser_action": {
 		"default_icon": "56.png",
-		"default_title": "Wiretab"
+		"default_title": "Wiretap"
 	}
 }
