@@ -1,5 +1,12 @@
 <script>
 
+Array.prototype.remove = function(element)
+{
+	var index = this.indexOf(element);
+	if (index != -1)
+		this.splice(index, 1);
+}
+
 function HitList()
 {
 	this.items = {}
@@ -33,12 +40,9 @@ URL.prototype.parse = function(url)
 function Site(domain)
 {
 	this.domain = domain;
-	this.requests = new HitList();
 	
-	this.requests.push = function(item) {
-		HitList.prototype.push.call(this, item);
-		console.log('Visited ' + item + ' for the ' + this.items[item] + 'th time');
-	}
+	this.requests = new HitList();
+	this.requested_by = new HitList();
 }
 
 Site.prototype.toString = function()
@@ -47,6 +51,8 @@ Site.prototype.toString = function()
 }
 
 var $sites = {};
+
+var $listeners = [];
 
 function getURLOfTab(tabId, callback)
 {
@@ -74,13 +80,29 @@ function getSiteOfURL(url, callback)
 }
 
 chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
-	if (request.tabId == -1)
+	if (request.tabId == -1) {
+		console.log('Tab unrelated request to', request.url);
 		return;
+	}
 	
 	getSiteOfTab(request.tabId, function(requesting_site) {
 		getSiteOfURL(request.url, function(requested_site) {
 			requesting_site.requests.push(requested_site);
+			requested_site.requested_by.push(requesting_site);
 		});
+	});
+});
+
+chrome.browserAction.onClicked.addListener(function(tab) {
+	var graph_url = chrome.extension.getURL('graph.html');
+	chrome.tabs.create({url: graph_url});
+});
+
+chrome.extension.onConnect.addListener(function(port) {
+	$listeners.push(port);
+	
+	port.onDisconnect.addListener(function() {
+		$listeners.remove(port);
 	});
 });
 
