@@ -1,0 +1,17 @@
+{
+	"name": "Wiretab",
+	"version": "1.0",
+	"icons": {
+		"48": "48.png",
+		"128": "128.png"
+	},
+	"background_page": "background.html",
+	"permissions": [
+		"tabs",
+		"experimental"
+	],
+	"browser_action": {
+		"default_icon": "56.png",
+		"default_title": "Wiretab"
+	}
+}

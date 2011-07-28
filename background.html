@@ -1,0 +1,87 @@
+<script>
+
+function HitList()
+{
+	this.items = {}
+}
+
+HitList.prototype.push = function(item)
+{
+	if (item in this.items)
+		this.items[item]++;
+	else
+		this.items[item] = 1;
+}
+
+function URL(url)
+{
+	this.parse(url);
+}
+
+URL.prototype.pattern = /^([^:]+):\/\/([^\/]+)\/?/;
+
+URL.prototype.parse = function(url)
+{
+	if (!(m = url.match(this.pattern)))
+		return false;
+	
+	this.url = url;
+	this.protocol = m[1];
+	this.hostname = m[2];
+}
+
+function Site(domain)
+{
+	this.domain = domain;
+	this.requests = new HitList();
+	
+	this.requests.push = function(item) {
+		HitList.prototype.push.call(this, item);
+		console.log('Visited ' + item + ' for the ' + this.items[item] + 'th time');
+	}
+}
+
+Site.prototype.toString = function()
+{
+	return this.domain;
+}
+
+var $sites = {};
+
+function getURLOfTab(tabId, callback)
+{
+	chrome.tabs.get(tabId, function(tab) {
+		if (tab)
+			callback(tab.url);
+	});
+}
+
+function getSiteOfTab(tabId, callback)
+{
+	getURLOfTab(tabId, function(url) {
+		getSiteOfURL(url, callback);
+	});
+}
+
+function getSiteOfURL(url, callback)
+{
+	var domain = new URL(url).hostname;
+	
+	if (domain in $sites === false)
+		$sites[domain] = new Site(domain);
+	
+	callback($sites[domain]);
+}
+
+chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
+	if (request.tabId == -1)
+		return;
+	
+	getSiteOfTab(request.tabId, function(requesting_site) {
+		getSiteOfURL(request.url, function(requested_site) {
+			requesting_site.requests.push(requested_site);
+		});
+	});
+});
+
+</script>
