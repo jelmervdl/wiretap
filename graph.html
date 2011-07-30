@@ -22,16 +22,11 @@
 		  fill: #fff;
 		}
 
-		.node {
-		  fill: #000;
+		.node circle {
+			stroke: #333;
+			fill: #ccc;
 		}
-
-		.cursor {
-		  fill: none;
-		  stroke: brown;
-		  pointer-events: none;
-		}
-
+		
 		.link {
 		  stroke: #999;
 		}
@@ -55,39 +50,44 @@
 				.attr("height", "100%");
 
 			var force = d3.layout.force()
-				.distance(60)
+				.linkDistance(function(l) { return Math.max(120 - l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items) * 100, 3 + radius(l.source) + radius(l.target)); })
+				//.linkStrength(function(l) { return l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items); })
+				.charge(-550)
+				//
+				//.friction(function(d) { return radius(d, 1, 30) / 30 })
 				.nodes(nodes)
 				.links(links);
 
 			force.on("tick", function() {
-			  vis.selectAll("line.link")
-				  .attr("x1", function(d) { return d.source.x; })
-				  .attr("y1", function(d) { return d.source.y; })
-				  .attr("x2", function(d) { return d.target.x; })
-				  .attr("y2", function(d) { return d.target.y; });
+				vis.selectAll("line.link")
+					.attr("x1", function(d) { return d.source.x; })
+					.attr("y1", function(d) { return d.source.y; })
+					.attr("x2", function(d) { return d.target.x; })
+					.attr("y2", function(d) { return d.target.y; });
 
-			  vis.selectAll("image.node")
-				  .attr("x", function(d) { return d.x - 8; })
-				  .attr("y", function(d) { return d.y - 8; });
+				vis.selectAll("g.node circle")
+					.attr("cx", function(d) { return d.x; })
+					.attr("cy", function(d) { return d.y; });
+				
+				vis.selectAll("g.node image")
+					.attr("x", function(d) { return d.x - 8; })
+					.attr("y", function(d) { return d.y - 8; });
 			});
 
-			chrome.extension.sendRequest({'action': 'get_sites'}, function($sites) {
-				console.log('Received', $sites);
+			chrome.extension.sendRequest({'action': 'get_sites'}, function(sites) {
+				console.log('received', sites);
 
-				for (var domain in $sites) {
-					var node = {x: 0, y: 0, site: $sites[domain]};
+				for (var domain in sites) {
+					var node = {x: 0, y: 0, site: sites[domain]};
 
 					nodes.push(node);
 
-					$sites[domain].node = node;
+					sites[domain].node = node;
 				}
 
-				for (var d in $sites) {
-					for (var r in $sites[d].requests.items) {
-						console.log(r, d);
-						links.push({source: $sites[d].node, target: $sites[r].node});
-					}
-				}
+				for (var d in sites)
+					for (var r in sites[d].requests.items)
+						links.push({source: sites[d].node, target: sites[r].node});
 
 				restart();
 			});
@@ -107,32 +107,47 @@
 				force
 				  .size([w, h]);
 			}
+			
+			function sum(obj) {
+				var n = 0;
+				for (var i in obj) n += obj[i];
+				return n;
+			}
+			
+			function radius(d) {
+				return 10 + Math.min(sum(d.site.requested_by.items), 30);
+			}
 
 			function restart() {
 			  force.start();
 
 			  vis.selectAll("line.link")
 				  .data(links)
-				.enter().insert("svg:line", "image.node")
+				.enter().insert("svg:line", "svg.node")
 				  .attr("class", "link")
 				  .attr("x1", function(d) { return d.source.x; })
 				  .attr("y1", function(d) { return d.source.y; })
 				  .attr("x2", function(d) { return d.target.x; })
 				  .attr("y2", function(d) { return d.target.y; });
 
-			  vis.selectAll("image.node")
-				  .data(nodes)
-				.enter().insert("svg:image")
-				  .attr("width", 16)
-				  .attr("height", 16)
-				  .attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; })
-				  .attr("title", function(d) { return d.site.domain; })
-				  .attr("class", "node")
-				  .attr("x", function(d) { return d.x - 8; })
-				  .attr("y", function(d) { return d.y - 8; })
-				  .on("mouseover", function (d) { d3.select("#info").text(d.site.domain) })
-				  .on("mouseout", function(d) { d3.select("#info").text("") })
-				  .call(force.drag);
+				var node = vis.selectAll("g.node").data(nodes).enter()
+					.append("svg:g")
+					.attr("class", "node")
+					.on("mouseover", function(d) { d3.select("#info").text(d.site.domain + " (" + sum(d.site.requested_by.items) + ")") })
+					.on("mouseout", function(d) { d3.select("#info").text("") })
+					.call(force.drag);
+				
+				node.append("svg:circle")
+					.attr("cx", function(d) { return d.x; })
+					.attr("cy", function(d) { return d.y; })
+					.attr("r", function(d) { return radius(d); });
+				
+				node.append("svg:image")
+					.attr("width", 16)
+					.attr("height", 16)
+					.attr("x", function(d) { return d.x; })
+					.attr("y", function(d) { return d.y; })
+					.attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; });
 			}
 		</script>
 	</body>
