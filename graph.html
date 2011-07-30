@@ -7,6 +7,17 @@
 		<script src="lib/d3/d3.layout.js"></script>
 		<style>
 
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		#info {
+			position: absolute;
+			top: 0;
+			right: 0;
+		}
+
 		rect {
 		  fill: #fff;
 		}
@@ -29,6 +40,7 @@
 	</head>
 	<body>
 		<div id="chart"></div>
+		<p id="info"></p>
 		<script>
 			var w = 960,
 				h = 500,
@@ -36,24 +48,16 @@
 				nodes = [],
 				links = [];
 
-			var vis = d3.select("#chart").append("svg:svg")
-				.attr("width", w)
-				.attr("height", h);
+			var vis = d3.select("#chart").append("svg:svg");
 
 			vis.append("svg:rect")
-				.attr("width", w)
-				.attr("height", h);
+				.attr("width", "100%")
+				.attr("height", "100%");
 
 			var force = d3.layout.force()
 				.distance(30)
 				.nodes(nodes)
-				.links(links)
-				.size([w, h]);
-
-			var cursor = vis.append("svg:circle")
-				.attr("r", 30)
-				.attr("transform", "translate(-100,-100)")
-				.attr("class", "cursor");
+				.links(links);
 
 			force.on("tick", function() {
 			  vis.selectAll("line.link")
@@ -67,28 +71,42 @@
 				  .attr("cy", function(d) { return d.y; });
 			});
 
-			vis.on("mousemove", function() {
-			  cursor.attr("transform", "translate(" + d3.svg.mouse(this) + ")");
-			});
+			chrome.extension.sendRequest({'action': 'get_sites'}, function($sites) {
+				console.log('Received', $sites);
 
-			vis.on("mousedown", function() {
-			  var point = d3.svg.mouse(this),
-				  node = {x: point[0], y: point[1]},
-				  n = nodes.push(node);
+				for (var domain in $sites) {
+					var node = {x: 0, y: 0, domain: domain};
 
-			  // add links to any nearby nodes
-			  nodes.forEach(function(target) {
-				var x = target.x - node.x,
-					y = target.y - node.y;
-				if (Math.sqrt(x * x + y * y) < 30) {
-				  links.push({source: node, target: target});
+					nodes.push(node);
+
+					$sites[domain].node = node;
 				}
-			  });
 
-			  restart();
+				for (var d in $sites) {
+					for (var r in $sites[d].requests.items) {
+						console.log(r, d);
+						links.push({source: $sites[d].node, target: $sites[r].node});
+					}
+				}
+
+				restart();
 			});
 
-			restart();
+			resize();
+
+			window.addEventListener('resize', resize, false);
+
+			function resize() {
+				w = document.body.clientWidth;
+				h = document.body.clientHeight;
+
+				vis
+				  .attr("width", w)
+				  .attr("height", h);
+				
+				force
+				  .size([w, h]);
+			}
 
 			function restart() {
 			  force.start();
@@ -105,10 +123,13 @@
 			  vis.selectAll("circle.node")
 				  .data(nodes)
 				.enter().insert("svg:circle", "circle.cursor")
+				  .attr("title", function(d) { return d.domain; })
 				  .attr("class", "node")
 				  .attr("cx", function(d) { return d.x; })
 				  .attr("cy", function(d) { return d.y; })
 				  .attr("r", 4.5)
+				  .on("mouseover", function (d) { d3.select("#info").text(d.domain) })
+				  .on("mouseout", function(d) { d3.select("#info").text("") })
 				  .call(force.drag);
 			}
 		</script>
