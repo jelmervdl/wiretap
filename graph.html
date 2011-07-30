@@ -55,7 +55,7 @@
 				.attr("height", "100%");
 
 			var force = d3.layout.force()
-				.distance(30)
+				.distance(60)
 				.nodes(nodes)
 				.links(links);
 
@@ -66,16 +66,16 @@
 				  .attr("x2", function(d) { return d.target.x; })
 				  .attr("y2", function(d) { return d.target.y; });
 
-			  vis.selectAll("circle.node")
-				  .attr("cx", function(d) { return d.x; })
-				  .attr("cy", function(d) { return d.y; });
+			  vis.selectAll("image.node")
+				  .attr("x", function(d) { return d.x - 8; })
+				  .attr("y", function(d) { return d.y - 8; });
 			});
 
 			chrome.extension.sendRequest({'action': 'get_sites'}, function($sites) {
 				console.log('Received', $sites);
 
 				for (var domain in $sites) {
-					var node = {x: 0, y: 0, domain: domain};
+					var node = {x: 0, y: 0, site: $sites[domain]};
 
 					nodes.push(node);
 
@@ -113,22 +113,24 @@
 
 			  vis.selectAll("line.link")
 				  .data(links)
-				.enter().insert("svg:line", "circle.node")
+				.enter().insert("svg:line", "image.node")
 				  .attr("class", "link")
 				  .attr("x1", function(d) { return d.source.x; })
 				  .attr("y1", function(d) { return d.source.y; })
 				  .attr("x2", function(d) { return d.target.x; })
 				  .attr("y2", function(d) { return d.target.y; });
 
-			  vis.selectAll("circle.node")
+			  vis.selectAll("image.node")
 				  .data(nodes)
-				.enter().insert("svg:circle", "circle.cursor")
-				  .attr("title", function(d) { return d.domain; })
+				.enter().insert("svg:image")
+				  .attr("width", 16)
+				  .attr("height", 16)
+				  .attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; })
+				  .attr("title", function(d) { return d.site.domain; })
 				  .attr("class", "node")
-				  .attr("cx", function(d) { return d.x; })
-				  .attr("cy", function(d) { return d.y; })
-				  .attr("r", 4.5)
-				  .on("mouseover", function (d) { d3.select("#info").text(d.domain) })
+				  .attr("x", function(d) { return d.x - 8; })
+				  .attr("y", function(d) { return d.y - 8; })
+				  .on("mouseover", function (d) { d3.select("#info").text(d.site.domain) })
 				  .on("mouseout", function(d) { d3.select("#info").text("") })
 				  .call(force.drag);
 			}

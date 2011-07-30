@@ -37,9 +37,10 @@ URL.prototype.parse = function(url)
 	this.hostname = m[2];
 }
 
-function Site(domain)
+function Site(url)
 {
-	this.domain = domain;
+	this.protocol = url.protocol;
+	this.domain = url.hostname;
 	
 	this.requests = new HitList();
 	this.requested_by = new HitList();
@@ -69,14 +70,14 @@ function getSiteOfTab(tabId, callback)
 	});
 }
 
-function getSiteOfURL(url, callback)
+function getSiteOfURL(href, callback)
 {
-	var domain = new URL(url).hostname;
+	var url = new URL(href);
 	
-	if (domain in $sites === false)
-		$sites[domain] = new Site(domain);
+	if (url.hostname in $sites === false)
+		$sites[url.hostname] = new Site(url);
 	
-	callback($sites[domain]);
+	callback($sites[url.hostname]);
 }
 
 chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
