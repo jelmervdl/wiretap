@@ -80,6 +80,17 @@ function getSiteOfURL(href, callback)
 	callback($sites[url.hostname]);
 }
 
+function notifyListeners(requesting_site, requested_site)
+{
+	$listeners.forEach(function(listener) {
+		listener.postMessage({
+			event: 'request',
+			requesting_site: requesting_site,
+			requested_site: requested_site
+		});
+	})
+}
+
 chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
 	if (request.tabId == -1) {
 		console.log('Tab unrelated request to', request.url);
@@ -90,6 +101,7 @@ chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
 		getSiteOfURL(request.url, function(requested_site) {
 			requesting_site.requests.push(requested_site);
 			requested_site.requested_by.push(requesting_site);
+			notifyListeners(requesting_site, requested_site);
 		});
 	});
 });

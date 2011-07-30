@@ -40,6 +40,7 @@
 			var w = 960,
 				h = 500,
 				fill = d3.scale.category20(),
+				sites = {},
 				nodes = [],
 				links = [];
 
@@ -50,7 +51,12 @@
 				.attr("height", "100%");
 
 			var force = d3.layout.force()
-				.linkDistance(function(l) { return Math.max(120 - l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items) * 100, 3 + radius(l.source) + radius(l.target)); })
+				.linkDistance(function(l) {
+					return Math.max(
+						120 - l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items) * 100,
+						3 + radius(l.source) + radius(l.target)
+					)
+				})
 				//.linkStrength(function(l) { return l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items); })
 				.charge(-550)
 				//
@@ -74,51 +80,112 @@
 					.attr("y", function(d) { return d.y - 8; });
 			});
 
-			chrome.extension.sendRequest({'action': 'get_sites'}, function(sites) {
-				console.log('received', sites);
+			chrome.extension.sendRequest({'action': 'get_sites'}, function(response) {
+				sites = response;
 
-				for (var domain in sites) {
-					var node = {x: 0, y: 0, site: sites[domain]};
+				// Give all received sites a node and initial links
+				for (var domain in response)
+					addSite(response[domain]);
 
-					nodes.push(node);
-
-					sites[domain].node = node;
-				}
-
-				for (var d in sites)
+				// Give all received sites their links
+				for (var d in response)
 					for (var r in sites[d].requests.items)
-						links.push({source: sites[d].node, target: sites[r].node});
+						addLink(d, r);
 
 				restart();
 			});
+			
+			var port = chrome.extension.connect();
+			
+			port.onMessage.addListener(function(m) {
+				console.log("message", m);
+				
+				var is_new = false;
+				
+				if (!sites[m.requesting_site.domain]) {
+					addSite(m.requesting_site);
+					is_new = true;
+				}
+				else {
+					increment(sites[m.requesting_site.domain].requests.items, m.requested_site.domain);
+				}
+				
+				if (!sites[m.requested_site.domain]) {
+					addSite(m.requested_site);
+					is_new = true;
+				}
+				else {
+					increment(sites[m.requested_site.domain].requested_by.items, m.requested_site.domain);
+				}
+				
+				// only add a new link if one of both is new
+				if (is_new)
+					addLink(m.requesting_site.domain, m.requested_site.domain);
+				
+				restart();
+			});
+			
+			function addSite(site)
+			{
+				if (!sites[site.domain])
+					sites[site.domain] = site;
+				
+				else if (sites[site.domain].node)
+					return;
+				
+			 	var node = {x: 0, y: 0, site: sites[site.domain]};
+				sites[site.domain].node = node;
+				nodes.push(node);
+			}
+			
+			function addLink(requesting_domain, requested_domain)
+			{
+				links.push({
+					source: sites[requesting_domain].node,
+					target: sites[requested_domain].node
+				});
+			}
 
 			resize();
 
 			window.addEventListener('resize', resize, false);
 
-			function resize() {
+			function resize()
+			{
 				w = document.body.clientWidth;
 				h = document.body.clientHeight;
-
+				
 				vis
-				  .attr("width", w)
-				  .attr("height", h);
+					.attr("width", w)
+					.attr("height", h);
 				
 				force
-				  .size([w, h]);
+					.size([w, h])
+					.start();
 			}
 			
-			function sum(obj) {
+			function increment(obj, idx)
+			{
+				if (idx in obj)
+					obj[idx]++
+				else
+					obj[idx] = 1;
+			}
+			
+			function sum(obj)
+			{
 				var n = 0;
 				for (var i in obj) n += obj[i];
 				return n;
 			}
 			
-			function radius(d) {
+			function radius(d)
+			{
 				return 10 + Math.min(sum(d.site.requested_by.items), 30);
 			}
 
-			function restart() {
+			function restart()
+			{
 			  force.start();
 
 			  vis.selectAll("line.link")
