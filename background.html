@@ -109,16 +109,18 @@ chrome.extension.onConnect.addListener(function(port) {
 });
 
 chrome.extension.onRequest.addListener(function(request, sender, respond) {
-	console.log("Received request", request);
-
 	if (!request.action)
 		return;
 	
 	switch (request.action) {
 		 case 'get_sites':
-		 	console.log('responding with', $sites);
 		 	respond($sites);
 		 	break;
+		case "reset":
+			$sites = {}
+			// XXX should we notify all the connected views as well?
+			respond(true);
+			break;
 	}
 });
 

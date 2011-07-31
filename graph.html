@@ -13,8 +13,14 @@
 		}
 
 		#info {
-			position: absolute;
+			position: fixed;
 			top: 0;
+			right: 0;
+		}
+		
+		#reset {
+			position: fixed;
+			bottom: 0;
 			right: 0;
 		}
 
@@ -36,6 +42,7 @@
 	<body>
 		<div id="chart"></div>
 		<p id="info"></p>
+		<button id="reset" onclick="reset()">Clear data</button>
 		<script>
 			var w = 960,
 				h = 500,
@@ -52,10 +59,15 @@
 
 			var force = d3.layout.force()
 				.linkDistance(function(l) {
-					return Math.max(
+					var dist = Math.max(
 						120 - l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items) * 100,
-						3 + radius(l.source) + radius(l.target)
-					)
+						//3 + radius(l.source) + radius(l.target)
+						20
+					);
+					
+					console.assert(!isNaN(dist));
+					
+					return dist;
 				})
 				//.linkStrength(function(l) { return l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items); })
 				.charge(-200)
@@ -78,6 +90,19 @@
 				//	.attr("r", function(d) { return radius(d); });
 			});
 			
+			function Node(site, origin)
+			{
+				this.x = origin ? origin.node.x : 0;
+				this.y = origin ? origin.node.y : 0;
+				this.site = site;
+			}
+			
+			function Link(source, target)
+			{
+				this.source = source;
+				this.target = target;
+			}
+			
 			function addSite(site, origin)
 			{
 				if (!sites[site.domain])
@@ -86,27 +111,32 @@
 				else if (sites[site.domain].node)
 					return;
 				
-			 	var node = {x: origin ? origin.node.x : 10, y: origin ? origin.node.y : 10, site: sites[site.domain]};
+			 	var node = new Node(sites[site.domain]);
 				sites[site.domain].node = node;
 				nodes.push(node);
 			}
 			
 			function addLink(requesting_domain, requested_domain)
 			{
+				if (requesting_domain == requested_domain)
+					return false;
+				
 				if (sites[requesting_domain].node === undefined)
 					throw Error("Cannot create link: requesting domain " + requesting_domain + " is missing a node");
 				
 				if (sites[requested_domain].node === undefined)
 					throw Error("Cannot create link: requested domain " + requested_domain + " is missing a node");
 				
-				links.push({
-					source: sites[requesting_domain].node,
-					target: sites[requested_domain].node
-				});
+				links.push(new Link(sites[requesting_domain].node, sites[requested_domain].node));
+				
+				return true;
 			}
 			
 			function isLinked(requesting_domain, requested_domain)
 			{
+				// XXX fix this
+				return false;
+				
 				if (sites[requesting_domain].node === undefined
 					|| sites[requested_domain].node === undefined)
 					return false;
@@ -141,10 +171,18 @@
 					return obj.items[idx] = 1;
 			}
 			
+			function keys(obj)
+			{
+				var keys = [];
+				for (var k in obj)
+					keys.push(k);
+
+				return keys;
+			}
+			
 			function sum(obj)
 			{
 				var n = 0;
-				
 				for (var i in obj)
 					n += obj[i];
 				
@@ -203,31 +241,32 @@
 				var port = chrome.extension.connect();
 
 				port.onMessage.addListener(function(m) {
-					console.log("message", m);
-
 					var is_new = false;
 
 					if (!sites[m.requesting_site.domain]) {
 						addSite(m.requesting_site, sites[m.requested_site.domain]);
 						is_new = true;
 					}
-					else {
-						is_new = increment(sites[m.requesting_site.domain].requests, m.requested_site.domain) === 1;
+					else if (increment(sites[m.requesting_site.domain].requests, m.requested_site.domain) === 1) {
+							is_new = true;
 					}
-
+					
 					if (!sites[m.requested_site.domain]) {
 						addSite(m.requested_site, sites[m.requested_site.domain]);
 						is_new = true;
 					}
-					else {
-						is_new = increment(sites[m.requested_site.domain].requested_by, m.requested_site.domain) === 1;
+					else if (increment(sites[m.requested_site.domain].requested_by, m.requesting_site.domain) === 1) {
+							is_new = true;
 					}
-
-					// only add a new link if one of both sites is new
-					if (is_new && !isLinked(m.requested_site.domain, m.requesting_site.domain))
-						addLink(m.requesting_site.domain, m.requested_site.domain);
 					
-					update(); // recalculate!
+					console.assert(sites[m.requesting_site.domain].requests.items[m.requested_site.domain]);
+					console.assert(sites[m.requested_site.domain].requested_by.items[m.requesting_site.domain]);
+					
+					// only add a new link if one of both sites is new
+					if (is_new && !isLinked(m.requested_site.domain, m.requesting_site.domain)) {
+						if (addLink(m.requesting_site.domain, m.requested_site.domain))
+							update(); // recalculate!
+					}
 				});
 				
 				// Import all $sites data that background.html already has collected.
@@ -262,6 +301,29 @@
 				console.assert(increment(x, "b") === 1, "increment does not return new value of 1");
 				console.assert(x.items.b === 1, "variable was not initialized with 1");
 			}
+			
+			function reset()
+			{
+				chrome.extension.sendRequest({"action":"reset"}, function(success) {
+					if (!success)
+						return;
+					
+					// clear all sites from memory
+					sites = {}
+					
+					// clear nodes and links of the graph
+					nodes.splice(0, nodes.length);
+					links.splice(0, links.length);
+					
+					// clear the canvas
+					vis.selectAll("*").remove();
+					
+					// force update!
+					update();
+				});
+			}
+			
+			test();
 			
 			main();
 		</script>
