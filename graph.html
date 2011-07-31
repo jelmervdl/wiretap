@@ -71,13 +71,11 @@
 					.attr("x2", function(d) { return d.target.x; })
 					.attr("y2", function(d) { return d.target.y; });
 
-				vis.selectAll("g.node circle")
-					.attr("cx", function(d) { return d.x; })
-					.attr("cy", function(d) { return d.y; });
+				vis.selectAll("g.node")
+					.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 				
-				vis.selectAll("g.node image")
-					.attr("x", function(d) { return d.x - 8; })
-					.attr("y", function(d) { return d.y - 8; });
+				vis.selectAll("g.node circle")
+					.attr("r", function(d) { return radius(d); });
 			});
 
 			chrome.extension.sendRequest({'action': 'get_sites'}, function(response) {
@@ -107,7 +105,7 @@
 					is_new = true;
 				}
 				else {
-					increment(sites[m.requesting_site.domain].requests.items, m.requested_site.domain);
+					increment(sites[m.requesting_site.domain].requests, m.requested_site.domain);
 				}
 				
 				if (!sites[m.requested_site.domain]) {
@@ -115,14 +113,17 @@
 					is_new = true;
 				}
 				else {
-					increment(sites[m.requested_site.domain].requested_by.items, m.requested_site.domain);
+					increment(sites[m.requested_site.domain].requested_by, m.requested_site.domain);
 				}
 				
-				// only add a new link if one of both is new
-				if (is_new)
+				// only add a new link if one of both sites is new
+				if (is_new) {
 					addLink(m.requesting_site.domain, m.requested_site.domain);
-				
-				restart();
+					restart(); // recalculate!
+				}
+				else {
+					force.start();
+				}
 			});
 			
 			function addSite(site)
@@ -167,15 +168,18 @@
 			function increment(obj, idx)
 			{
 				if (idx in obj)
-					obj[idx]++
+					++obj.items[idx]; 
 				else
-					obj[idx] = 1;
+					obj.items[idx] = 1;
 			}
 			
 			function sum(obj)
 			{
 				var n = 0;
-				for (var i in obj) n += obj[i];
+				
+				for (var i in obj)
+					n += obj[i];
+				
 				return n;
 			}
 			
@@ -205,15 +209,15 @@
 					.call(force.drag);
 				
 				node.append("svg:circle")
-					.attr("cx", function(d) { return d.x; })
-					.attr("cy", function(d) { return d.y; })
+					.attr("cx", 0)
+					.attr("cy", 0)
 					.attr("r", function(d) { return radius(d); });
 				
 				node.append("svg:image")
 					.attr("width", 16)
 					.attr("height", 16)
-					.attr("x", function(d) { return d.x; })
-					.attr("y", function(d) { return d.y; })
+					.attr("x", -8)
+					.attr("y", -8)
 					.attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; });
 			}
 		</script>
