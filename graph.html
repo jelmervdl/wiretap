@@ -74,8 +74,8 @@
 				vis.selectAll("g.node")
 					.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 				
-				vis.selectAll("g.node circle")
-					.attr("r", function(d) { return radius(d); });
+				//vis.selectAll("g.node circle")
+				//	.attr("r", function(d) { return radius(d); });
 			});
 			
 			function addSite(site, origin)
@@ -179,7 +179,8 @@
 				node.append("svg:circle")
 					.attr("cx", 0)
 					.attr("cy", 0)
-					.attr("r", function(d) { return radius(d); });
+					//.attr("r", function(d) { return radius(d); });
+					.attr("r", 12);
 				
 				node.append("svg:image")
 					.attr("width", 16)
