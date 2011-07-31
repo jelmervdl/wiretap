@@ -141,6 +141,12 @@
 			
 			function addLink(requesting_domain, requested_domain)
 			{
+				if (sites[requesting_domain].node === undefined)
+					throw Error("Cannot create link: requesting domain " + requesting_domain + " is missing a node");
+				
+				if (sites[requested_domain].node === undefined)
+					throw Error("Cannot create link: requested domain " + requested_domain + " is missing a node");
+				
 				links.push({
 					source: sites[requesting_domain].node,
 					target: sites[requested_domain].node

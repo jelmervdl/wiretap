@@ -27,6 +27,8 @@ function URL(url)
 
 URL.prototype.pattern = /^([^:]+):\/\/([^\/]+)\/?/;
 
+URL.prototype.domainPattern = /([^.]+\.[^.]+)$/;
+
 URL.prototype.parse = function(url)
 {
 	if (!(m = url.match(this.pattern)))
@@ -35,12 +37,17 @@ URL.prototype.parse = function(url)
 	this.url = url;
 	this.protocol = m[1];
 	this.hostname = m[2];
+	
+	if (m = this.hostname.match(this.domainPattern))
+		this.domain = m[1];
+	else
+		this.domain = this.hostname;
 }
 
 function Site(url)
 {
 	this.protocol = url.protocol;
-	this.domain = url.hostname;
+	this.domain = url.domain;
 	
 	this.requests = new HitList();
 	this.requested_by = new HitList();
@@ -74,10 +81,10 @@ function getSiteOfURL(href, callback)
 {
 	var url = new URL(href);
 	
-	if (url.hostname in $sites === false)
-		$sites[url.hostname] = new Site(url);
+	if (url.domain in $sites === false)
+		$sites[url.domain] = new Site(url);
 	
-	callback($sites[url.hostname]);
+	callback($sites[url.domain]);
 }
 
 function notifyListeners(requesting_site, requested_site)
