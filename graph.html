@@ -77,54 +77,6 @@
 				vis.selectAll("g.node circle")
 					.attr("r", function(d) { return radius(d); });
 			});
-
-			chrome.extension.sendRequest({'action': 'get_sites'}, function(response) {
-				sites = response;
-
-				// Give all received sites a node and initial links
-				for (var domain in response)
-					addSite(response[domain]);
-
-				// Give all received sites their links
-				for (var d in response)
-					for (var r in sites[d].requests.items)
-						addLink(d, r);
-
-				restart();
-			});
-			
-			var port = chrome.extension.connect();
-			
-			port.onMessage.addListener(function(m) {
-				console.log("message", m);
-				
-				var is_new = false;
-				
-				if (!sites[m.requesting_site.domain]) {
-					addSite(m.requesting_site);
-					is_new = true;
-				}
-				else {
-					increment(sites[m.requesting_site.domain].requests, m.requested_site.domain);
-				}
-				
-				if (!sites[m.requested_site.domain]) {
-					addSite(m.requested_site);
-					is_new = true;
-				}
-				else {
-					increment(sites[m.requested_site.domain].requested_by, m.requested_site.domain);
-				}
-				
-				// only add a new link if one of both sites is new
-				if (is_new) {
-					addLink(m.requesting_site.domain, m.requested_site.domain);
-					restart(); // recalculate!
-				}
-				else {
-					force.start();
-				}
-			});
 			
 			function addSite(site)
 			{
@@ -152,10 +104,20 @@
 					target: sites[requested_domain].node
 				});
 			}
-
-			resize();
-
-			window.addEventListener('resize', resize, false);
+			
+			function isLinked(requesting_domain, requested_domain)
+			{
+				if (sites[requesting_domain].node === undefined
+					|| sites[requested_domain].node === undefined)
+					return false;
+				
+				var link = {
+					source: sites[requesting_domain].node,
+					target: sites[requested_domain].node
+				}
+				
+				return links.indexOf(link) !== -1;
+			}
 
 			function resize()
 			{
@@ -173,10 +135,10 @@
 			
 			function increment(obj, idx)
 			{
-				if (idx in obj)
-					++obj.items[idx]; 
+				if (idx in obj.items)
+					return obj.items[idx] += 1;
 				else
-					obj.items[idx] = 1;
+					return obj.items[idx] = 1;
 			}
 			
 			function sum(obj)
@@ -194,7 +156,7 @@
 				return 10 + Math.min(sum(d.site.requested_by.items), 30);
 			}
 
-			function restart()
+			function update()
 			{
 			  force.start();
 
@@ -226,6 +188,84 @@
 					.attr("y", -8)
 					.attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; });
 			}
+			
+			function main()
+			{
+				// Update the canvas on resize
+				
+				resize();
+
+				window.addEventListener('resize', resize, false);
+
+				// Setup the connection for events of newly requested sites
+				
+				var port = chrome.extension.connect();
+
+				port.onMessage.addListener(function(m) {
+					console.log("message", m);
+
+					var is_new = false;
+
+					if (!sites[m.requesting_site.domain]) {
+						addSite(m.requesting_site);
+						is_new = true;
+					}
+					else {
+						is_new = increment(sites[m.requesting_site.domain].requests, m.requested_site.domain) === 1;
+					}
+
+					if (!sites[m.requested_site.domain]) {
+						addSite(m.requested_site);
+						is_new = true;
+					}
+					else {
+						is_new = increment(sites[m.requested_site.domain].requested_by, m.requested_site.domain) === 1;
+					}
+
+					// only add a new link if one of both sites is new
+					if (is_new && !isLinked(m.requested_site.domain, m.requesting_site.domain)) {
+						addLink(m.requesting_site.domain, m.requested_site.domain);
+						update(); // recalculate!
+					}
+					else {
+						force.start();
+					}
+				});
+				
+				// Import all $sites data that background.html already has collected.
+				
+				chrome.extension.sendRequest({'action': 'get_sites'}, function(response) {
+					sites = response;
+
+					// Give all received sites a node and initial links
+					for (var domain in response)
+						addSite(response[domain]);
+
+					// Give all received sites their links
+					for (var d in response)
+						for (var r in sites[d].requests.items)
+							addLink(d, r);
+
+					update();
+				});
+			}
+			
+			function test()
+			{
+				var x = {
+					"items": {
+						"a": 3
+					}
+				};
+				
+				console.assert(increment(x, "a") === 4, "incrementing does not return updated value");
+				console.assert(x.items.a === 4, "variable was not incremented");
+				
+				console.assert(increment(x, "b") === 1, "increment does not return new value of 1");
+				console.assert(x.items.b === 1, "variable was not initialized with 1");
+			}
+			
+			main();
 		</script>
 	</body>
 </html>
