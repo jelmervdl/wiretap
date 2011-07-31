@@ -1,62 +1,8 @@
+<script src="lib/Array.js"></script>
+<script src="lib/URL.js"></script>
+<script src="lib/HitList.js"></script>
+<script src="lib/Site.js"></script>
 <script>
-
-Array.prototype.remove = function(element)
-{
-	var index = this.indexOf(element);
-	if (index != -1)
-		this.splice(index, 1);
-}
-
-function HitList()
-{
-	this.items = {}
-}
-
-HitList.prototype.push = function(item)
-{
-	if (item in this.items)
-		this.items[item]++;
-	else
-		this.items[item] = 1;
-}
-
-function URL(url)
-{
-	this.parse(url);
-}
-
-URL.prototype.pattern = /^([^:]+):\/\/([^\/]+)\/?/;
-
-URL.prototype.domainPattern = /([^.]+\.[^.]+)$/;
-
-URL.prototype.parse = function(url)
-{
-	if (!(m = url.match(this.pattern)))
-		return false;
-	
-	this.url = url;
-	this.protocol = m[1];
-	this.hostname = m[2];
-	
-	if (m = this.hostname.match(this.domainPattern))
-		this.domain = m[1];
-	else
-		this.domain = this.hostname;
-}
-
-function Site(url)
-{
-	this.protocol = url.protocol;
-	this.domain = url.domain;
-	
-	this.requests = new HitList();
-	this.requested_by = new HitList();
-}
-
-Site.prototype.toString = function()
-{
-	return this.domain;
-}
 
 var $sites = {};
 
