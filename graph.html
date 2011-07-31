@@ -12,55 +12,70 @@
 			margin: 0;
 			padding: 0;
 			
-			font: 13px Helvetica;
+			background: #E1E5EC;
+			
+			font: 13px Helvetica, sans-serif;
+			text-shadow: white 0 1px 1px;
+			
+			/* disable scrollbars, they tend to show up when resizing */
+			overflow: hidden;
 		}
-
+		
 		#info {
 			position: fixed;
 			margin: 0;
 			padding: 0;
-			top: 8px;
-			right: 8px;
+			bottom: 8px;
+			left: 8px;
+			color: black;
+		}
+		
+		#info .requests {
+			opacity: 0.5;
+		}
+		
+		.hidden {
+			display: none;
 		}
 		
 		#reset {
 			position: fixed;
 			bottom: 8px;
 			right: 8px;
+			color: #426DC9;
+			text-decoration: none;
 		}
-
-		rect {
-		  fill: #fff;
+		
+		#chart svg {
+			width: 100%;
+			height: 100%;
 		}
 
 		.node circle {
-			stroke: #333;
-			fill: #ccc;
+			stroke: #999;
+			fill: #fff; /* lots of favicons look better on a white background */
 		}
 		
 		.link {
-		  stroke: #999;
+			stroke: #999;
 		}
 
-		    </style>
+		</style>
 	</head>
 	<body>
 		<div id="chart"></div>
-		<p id="info"></p>
-		<a href="#" id="reset" onclick="reset()">Clear data</a>
+		<p id="info" class="hidden">
+			<span class="domain"></span>
+			<span class="requests"></span>
+		</p>
+		<a href="javascript:reset()" id="reset">Reset</a>
 		<script>
-			var w = 960,
-				h = 500,
-				fill = d3.scale.category20(),
-				sites = {},
+			var sites = {},
 				nodes = [],
 				links = [];
 
-			var vis = d3.select("#chart").append("svg:svg");
-
-			vis.append("svg:rect")
-				.attr("width", "100%")
-				.attr("height", "100%");
+			var vis = d3.select("#chart")
+				.append("svg:svg");
 
 			var force = d3.layout.force()
 				.linkDistance(function(l) {
@@ -156,15 +171,11 @@
 
 			function resize()
 			{
-				w = document.body.clientWidth;
-				h = document.body.clientHeight;
-				
-				vis
-					.attr("width", w)
-					.attr("height", h);
-				
 				force
-					.size([w, h])
+					.size([
+						document.body.clientWidth,
+						document.body.clientHeight
+					])
 					.start();
 			}
 			
@@ -215,15 +226,21 @@
 				var node = vis.selectAll("g.node").data(nodes).enter()
 					.append("svg:g")
 					.attr("class", "node")
-					.on("mouseover", function(d) { d3.select("#info").text(d.site.domain + " (" + sum(d.site.requested_by.items) + ")") })
-					.on("mouseout", function(d) { d3.select("#info").text("") })
+					.on("mouseover", function(d) {
+						d3.select("#info .domain").text(d.site.domain);
+						d3.select("#info .requests").text(sum(d.site.requested_by.items));
+						d3.select("#info").classed("hidden", false);
+					})
+					.on("mouseout", function(d) {
+						d3.select("#info").classed("hidden", true);
+					})
 					.call(force.drag);
 				
 				node.append("svg:circle")
 					.attr("cx", 0)
 					.attr("cy", 0)
 					//.attr("r", function(d) { return radius(d); });
-					.attr("r", 12);
+					.attr("r", 13);
 				
 				node.append("svg:image")
 					.attr("width", 16)
