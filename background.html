@@ -87,6 +87,15 @@ function getSiteOfURL(href, callback)
 	callback($sites[url.domain]);
 }
 
+function getHeader(name, headers)
+{
+	for (var i = 0; i < headers.length; ++i)
+		if (headers[i].name == name)
+			return headers[i].value;
+	
+	return null;
+}
+
 function notifyListeners(requesting_site, requested_site)
 {
 	$listeners.forEach(function(listener) {
@@ -98,6 +107,7 @@ function notifyListeners(requesting_site, requested_site)
 	})
 }
 
+/*
 chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
 	if (request.tabId == -1) {
 		console.log('Tab unrelated request to', request.url);
@@ -114,6 +124,30 @@ chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
 }, {
 	types: ["sub_frame", "stylesheet", "script", "image", "object", "other"]
 });
+*/
+
+chrome.experimental.webRequest.onSendHeaders.addListener(
+	function(request) {
+		var referrer = getHeader("Referer", request.requestHeaders);
+		
+		if (!referrer) {
+			console.log("No referrer for", request.url);
+			return;
+		}
+		
+		getSiteOfURL(referrer, function(requesting_site) {
+			getSiteOfURL(request.url, function(requested_site) {
+				requesting_site.requests.push(requested_site);
+				requested_site.requested_by.push(requesting_site);
+				notifyListeners(requesting_site, requested_site);
+			});
+		});
+	},
+	{
+		types: ["sub_frame", "stylesheet", "script", "image", "object", "other"]
+	},
+	["requestHeaders"]
+);
 
 chrome.browserAction.onClicked.addListener(function(tab) {
 	var graph_url = chrome.extension.getURL('graph.html');
