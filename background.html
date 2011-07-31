@@ -111,6 +111,8 @@ chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
 			notifyListeners(requesting_site, requested_site);
 		});
 	});
+}, {
+	types: ["sub_frame", "stylesheet", "script", "image", "object", "other"]
 });
 
 chrome.browserAction.onClicked.addListener(function(tab) {
