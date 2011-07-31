@@ -131,7 +131,7 @@ chrome.experimental.webRequest.onSendHeaders.addListener(
 		var referrer = getHeader("Referer", request.requestHeaders);
 		
 		if (!referrer) {
-			console.log("No referrer for", request.url);
+			console.log("No referrer for", request.url, request.requestHeaders);
 			return;
 		}
 		
@@ -144,7 +144,7 @@ chrome.experimental.webRequest.onSendHeaders.addListener(
 		});
 	},
 	{
-		types: ["sub_frame", "stylesheet", "script", "image", "object", "other"]
+		types: ["sub_frame", "stylesheet", "script", "image", "object"]
 	},
 	["requestHeaders"]
 );
