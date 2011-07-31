@@ -2,6 +2,7 @@
 <html>
 	<head>
 		<title>Wiretap</title>
+		<link rel="icon" href="48.png">
 		<script src="lib/d3/d3.js"></script>
 		<script src="lib/d3/d3.geom.js"></script>
 		<script src="lib/d3/d3.layout.js"></script>
@@ -10,18 +11,22 @@
 		body {
 			margin: 0;
 			padding: 0;
+			
+			font: 13px Helvetica;
 		}
 
 		#info {
 			position: fixed;
-			top: 0;
-			right: 0;
+			margin: 0;
+			padding: 0;
+			top: 8px;
+			right: 8px;
 		}
 		
 		#reset {
 			position: fixed;
-			bottom: 0;
-			right: 0;
+			bottom: 8px;
+			right: 8px;
 		}
 
 		rect {
@@ -42,7 +47,7 @@
 	<body>
 		<div id="chart"></div>
 		<p id="info"></p>
-		<button id="reset" onclick="reset()">Clear data</button>
+		<a href="#" id="reset" onclick="reset()">Clear data</a>
 		<script>
 			var w = 960,
 				h = 500,
@@ -60,7 +65,7 @@
 			var force = d3.layout.force()
 				.linkDistance(function(l) {
 					var dist = Math.max(
-						120 - l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items) * 100,
+						150 - l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items) * 120,
 						//3 + radius(l.source) + radius(l.target)
 						20
 					);
@@ -134,7 +139,7 @@
 			
 			function isLinked(requesting_domain, requested_domain)
 			{
-				// XXX fix this
+				// XXX fix this?
 				return false;
 				
 				if (sites[requesting_domain].node === undefined
@@ -229,15 +234,41 @@
 					.attr("xlink:href", function(d) { return "http://" + d.site.domain.substring(0, 1) + ".getfavicon.appspot.com/" + d.site.protocol + "://" + d.site.domain + "?defaulticon=lightpng"; });
 			}
 			
+			function reset()
+			{
+				chrome.extension.sendRequest({"action": "reset"}, function(success) {
+					if (!success)
+						return;
+					
+					clearGraph();
+				});
+			}
+			
+			function clearGraph()
+			{
+				// clear all sites from memory
+				sites = {}
+				
+				// clear nodes and links of the graph
+				nodes.splice(0, nodes.length);
+				links.splice(0, links.length);
+				
+				// clear the canvas
+				vis.selectAll("*").remove();
+				
+				// force update!
+				update();
+			}
+			
 			function main()
 			{
-				// Update the canvas on resize
+				/* Update the graph canvas on resize */
 				
 				resize();
 
 				window.addEventListener('resize', resize, false);
 
-				// Setup the connection for events of newly requested sites
+				/* Setup the connection for events of newly requested sites */
 				
 				var port = chrome.extension.connect();
 
@@ -270,7 +301,7 @@
 					}
 				});
 				
-				// Import all $sites data that background.html already has collected.
+				/* Import all $sites data that background.html already has collected. */
 				
 				chrome.extension.sendRequest({'action': 'get_sites'}, function(response) {
 					sites = response;
@@ -301,27 +332,6 @@
 				
 				console.assert(increment(x, "b") === 1, "increment does not return new value of 1");
 				console.assert(x.items.b === 1, "variable was not initialized with 1");
-			}
-			
-			function reset()
-			{
-				chrome.extension.sendRequest({"action":"reset"}, function(success) {
-					if (!success)
-						return;
-					
-					// clear all sites from memory
-					sites = {}
-					
-					// clear nodes and links of the graph
-					nodes.splice(0, nodes.length);
-					links.splice(0, links.length);
-					
-					// clear the canvas
-					vis.selectAll("*").remove();
-					
-					// force update!
-					update();
-				});
 			}
 			
 			test();

@@ -53,33 +53,13 @@ function notifyListeners(requesting_site, requested_site)
 	})
 }
 
-/*
-chrome.experimental.webRequest.onBeforeRequest.addListener(function(request) {
-	if (request.tabId == -1) {
-		console.log('Tab unrelated request to', request.url);
-		return;
-	}
-	
-	getSiteOfTab(request.tabId, function(requesting_site) {
-		getSiteOfURL(request.url, function(requested_site) {
-			requesting_site.requests.push(requested_site);
-			requested_site.requested_by.push(requesting_site);
-			notifyListeners(requesting_site, requested_site);
-		});
-	});
-}, {
-	types: ["sub_frame", "stylesheet", "script", "image", "object", "other"]
-});
-*/
-
 chrome.experimental.webRequest.onSendHeaders.addListener(
 	function(request) {
 		var referrer = getHeader("Referer", request.requestHeaders);
 		
-		if (!referrer) {
-			console.log("No referrer for", request.url, request.requestHeaders);
+		// No referer? Than probably a local page (like the extension's graph page itself!)
+		if (!referrer)
 			return;
-		}
 		
 		getSiteOfURL(referrer, function(requesting_site) {
 			getSiteOfURL(request.url, function(requested_site) {
@@ -90,6 +70,7 @@ chrome.experimental.webRequest.onSendHeaders.addListener(
 		});
 	},
 	{
+		// Don't track normal (user-triggered) navigation nor extensions
 		types: ["sub_frame", "stylesheet", "script", "image", "object"]
 	},
 	["requestHeaders"]
