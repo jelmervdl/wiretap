@@ -58,7 +58,7 @@
 					)
 				})
 				//.linkStrength(function(l) { return l.target.site.requested_by.items[l.source.site.domain] / sum(l.target.site.requested_by.items); })
-				.charge(-550)
+				.charge(-200)
 				//
 				//.friction(function(d) { return radius(d, 1, 30) / 30 })
 				.nodes(nodes)
@@ -78,7 +78,7 @@
 					.attr("r", function(d) { return radius(d); });
 			});
 			
-			function addSite(site)
+			function addSite(site, origin)
 			{
 				if (!sites[site.domain])
 					sites[site.domain] = site;
@@ -86,7 +86,7 @@
 				else if (sites[site.domain].node)
 					return;
 				
-			 	var node = {x: 0, y: 0, site: sites[site.domain]};
+			 	var node = {x: origin ? origin.node.x : 10, y: origin ? origin.node.y : 10, site: sites[site.domain]};
 				sites[site.domain].node = node;
 				nodes.push(node);
 			}
@@ -207,7 +207,7 @@
 					var is_new = false;
 
 					if (!sites[m.requesting_site.domain]) {
-						addSite(m.requesting_site);
+						addSite(m.requesting_site, sites[m.requested_site.domain]);
 						is_new = true;
 					}
 					else {
@@ -215,7 +215,7 @@
 					}
 
 					if (!sites[m.requested_site.domain]) {
-						addSite(m.requested_site);
+						addSite(m.requested_site, sites[m.requested_site.domain]);
 						is_new = true;
 					}
 					else {
@@ -223,13 +223,10 @@
 					}
 
 					// only add a new link if one of both sites is new
-					if (is_new && !isLinked(m.requested_site.domain, m.requesting_site.domain)) {
+					if (is_new && !isLinked(m.requested_site.domain, m.requesting_site.domain))
 						addLink(m.requesting_site.domain, m.requested_site.domain);
-						update(); // recalculate!
-					}
-					else {
-						force.start();
-					}
+					
+					update(); // recalculate!
 				});
 				
 				// Import all $sites data that background.html already has collected.
