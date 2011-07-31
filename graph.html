@@ -225,7 +225,8 @@
 					.attr("height", 16)
 					.attr("x", -8)
 					.attr("y", -8)
-					.attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; });
+					//.attr("xlink:href", function(d) { return "chrome://favicon/" + d.site.protocol + "://" + d.site.domain; });
+					.attr("xlink:href", function(d) { return "http://" + d.site.domain.substring(0, 1) + ".getfavicon.appspot.com/" + d.site.protocol + "://" + d.site.domain + "?defaulticon=lightpng"; });
 			}
 			
 			function main()
