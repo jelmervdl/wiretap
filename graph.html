@@ -56,6 +56,11 @@
 			fill: #fff; /* lots of favicons look better on a white background */
 		}
 		
+		.tracker circle {
+			stroke: orange;
+			fill: #fdc;
+		}
+		
 		.link {
 			stroke: #999;
 		}
@@ -71,6 +76,7 @@
 		<a href="javascript:reset()" id="reset">Reset</a>
 		<script>
 			var sites = {},
+				trackers = {},
 				nodes = [],
 				links = [];
 
@@ -225,7 +231,8 @@
 
 				var node = vis.selectAll("g.node").data(nodes).enter()
 					.append("svg:g")
-					.attr("class", "node")
+					.classed("node", true)
+					.classed("tracker", function(d) { return trackers[d.site.domain]; })
 					.on("mouseover", function(d) {
 						d3.select("#info .domain").text(d.site.domain);
 						d3.select("#info .requests").text(sum(d.site.requested_by.items));
@@ -316,6 +323,15 @@
 						if (addLink(m.requesting_site.domain, m.requested_site.domain))
 							update(); // recalculate!
 					}
+				});
+				
+				/* Import tracker sites */
+				
+				d3.json(chrome.extension.getURL("etc/trackers.json"), function(tracker_list) {
+					for (var i = 0, m = tracker_list.length; i < m; ++i)
+						trackers[tracker_list[i]] = true;
+					
+					update();
 				});
 				
 				/* Import all $sites data that background.html already has collected. */
