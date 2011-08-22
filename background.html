@@ -76,11 +76,6 @@ chrome.experimental.webRequest.onSendHeaders.addListener(
 	["requestHeaders"]
 );
 
-chrome.browserAction.onClicked.addListener(function(tab) {
-	var graph_url = chrome.extension.getURL('graph.html');
-	chrome.tabs.create({url: graph_url});
-});
-
 chrome.extension.onConnect.addListener(function(port) {
 	$listeners.push(port);
 	

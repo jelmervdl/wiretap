@@ -11,8 +11,10 @@
 		"experimental",
 		"chrome://favicon/"
 	],
-	"browser_action": {
-		"default_icon": "56.png",
-		"default_title": "Wiretap"
+	"app": {
+		"launch": {
+			"local_path": "graph.html",
+			"container": "tab"
+		}
 	}
 }
