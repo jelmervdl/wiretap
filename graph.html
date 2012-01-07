@@ -327,6 +327,8 @@
 				
 				/* Import tracker sites */
 				
+				// todo: run JSON.encode(Array.prototype.map.call(document.querySelectorAll('#domain_id > option'), function(option) { return option.innerText; })) on http://www.privacychoice.org/companies/all to fetch a fresh list.
+
 				d3.json(chrome.extension.getURL("etc/trackers.json"), function(tracker_list) {
 					for (var i = 0, m = tracker_list.length; i < m; ++i)
 						trackers[tracker_list[i]] = true;
