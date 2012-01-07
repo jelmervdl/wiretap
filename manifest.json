@@ -8,8 +8,10 @@
 	"background_page": "background.html",
 	"permissions": [
 		"tabs",
-		"experimental",
-		"chrome://favicon/"
+		"webRequest",
+		"chrome://favicon/",
+		"http://*/*",
+		"https://*/*"
 	],
 	"app": {
 		"launch": {

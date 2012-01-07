@@ -53,7 +53,7 @@ function notifyListeners(requesting_site, requested_site)
 	})
 }
 
-chrome.experimental.webRequest.onSendHeaders.addListener(
+chrome.webRequest.onSendHeaders.addListener(
 	function(request) {
 		var referrer = getHeader("Referer", request.requestHeaders);
 		
@@ -71,6 +71,7 @@ chrome.experimental.webRequest.onSendHeaders.addListener(
 	},
 	{
 		// Don't track normal (user-triggered) navigation nor extensions
+		urls: ['http://*/*', 'https://*/*'],
 		types: ["sub_frame", "stylesheet", "script", "image", "object"]
 	},
 	["requestHeaders"]
